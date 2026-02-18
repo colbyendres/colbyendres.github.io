@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Musings | (Mostly) Perfect Matchings </title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body);"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ]
+            });
+        });
+    </script>
+</head>
+
+<body class="bg-indigo-950 text-slate-100 min-h-screen">
+    <header class="max-w-5xl mx-auto px-6 py-8">
+        <nav class="flex flex-wrap items-center justify-between gap-4">
+            <div class="text-2xl font-semibold text-amber-500">Colby Endres</div>
+            <ul class="flex flex-wrap gap-6 text-emerald-400">
+                <li><a class="hover:text-amber-500 transition" href="../index.html">Home</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../education.html">Education</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../projects.html">Projects</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../musings.html">Musings</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../resume.html">Resumé</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-10">
+        <section class="space-y-4 border-b-2 border-dotted pb-6">
+            <h1 class="text-4xl font-bold text-amber-500">(Mostly) Perfect Matchings</h1>
+            <p class="text-lg leading-relaxed">
+                Disrupting a beloved college tradition with mathematical optimization
+            </p>
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> MentorMatch </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                As of late, I've been working on a project called <a href="https://github.com/colbyendres/MentorMatch"
+                    class="text-emerald-400 hover:text-amber-500"> MentorMatch</a>,
+                a service designed to pair mentees to mentors according to a set of preferences. This was primarily
+                motivated by "Matching Day", a semiannual tradition in Greek life
+                in which new inductees are paired with existing members of the organization. Not being a member of a
+                fraternity myself, I asked a friend of mine for more details. Here's
+                what I was told:
+            </p>
+
+            <ol class="list-decimal leading-relaxed list-inside pl-8 mb-4">
+                <li> A list of all new members and eligible existing members is made public. </li>
+                <li> After a series of events where the two groups mingle, each new member generates of list of mentors
+                    they like and vice versa. </li>
+                <li> ??? </li>
+                <li> The list of matchings is published, with great pomp and circumstance. </li>
+            </ol>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                I was told there exists a preference committee elected each year whose sole
+                responsiblity is generating this pairing. Unsurprisingly, the actual matching procedure is deliberately
+                opaque.
+                From what I gathered, the process is not unlike a papal conclave- the committee is gathered into one
+                room, isolated from the
+                rest of the world, and asked not to emerge until everyone has been matched. Given the nature of
+                sealed-door conversations,
+                it is impossible for members to interrogate the decisions made by the committee. And so, like many other
+                engineers, I thought
+                to myself:
+            </p>
+
+            <p class="text-lg text-center italic leading-relaxed text-slate-100/80 indent-4 mb-4">
+                "There has to be an easier way of doing this..."
+            </p>
+
+        </section>
+
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Perfect Matchings </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Fortunately, such matching problems have been a well-studied area of applied mathematics for decades. In
+                particular, we're looking
+                for something called a <span class="italic"> perfect matching</span>, in which every person is assigned
+                exactly one partner who happened
+                to be on their preference list. Unfortunately, this might prove impossible, so we instead set our sights
+                on a less lofty goal: maximizing global
+                happiness<sup id="ref-1"> <a href="#fn-1" >1</a> </sup>.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Let's formalize exactly what we're aiming for here. Suppose we have $n$ mentors and $n$ mentees, with
+                each person having an <span class="italic"> unordered </span> list of preferences<sup id="ref-2"> <a href="#fn-2" >2</a> </sup>. We can create a
+                preference matrix
+                $C$ as follows:
+                $$C_{ij} = \mathbf{1}(\text{mentor } i \text{ prefers mentee } j) + \mathbf{1}(\text{mentee } j \text{
+                prefers mentor } i)$$
+                where $\mathbf{1}(x)$ is the indicator function. Our goal is to pick one entry from each
+                row and column of $C$, such that the sum of entries is maximized. If we let $(i, m_i)$ represent the
+                assigned
+                mentee-mentor pairs, this
+                admits the objective function:
+                $$ \argmax_{(m_1 \dots m_n)} \sum_{i=1}^n C_{im_i} \qquad \text{s.t. } m_i \text{ all distinct } $$
+                or using the language of linear algebra:
+                $$ \argmax_{P} || P \odot C ||_F \qquad \text{s.t. } P \text{ a permutation matrix } $$
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Thankfully, there exists an abundance of libraries dedicated towards solving this problem (I used
+                SciPy's
+                <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.linear_sum_assignment.html"
+                    class="text-emerald-400 hover:text-amber-500"> linear_sum_assignment</a>).
+                This returns the optimal row/column pairs, from which we can recover our final happiness score by
+                summing the relevant entries of $C_{ij}$ and dividing by
+                the maximum happiness $2n$.
+            </p>
+
+
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Breaking Ties </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Depending on how the preference data shakes out, our matching may not be unique. As a somewhat trivial
+                example, consider
+                an amiable group of mentors and mentees, in which each person prefers all members of the opposite class.
+                Our preference
+                matrix $C$ would contain only twos and all $n!$ possible matchings would attain maximum happiness. The
+                algorithm we use
+                is deterministic (i.e. we always return the same solution for every run, even if multiple exist). Does
+                this matter?
+                Mathematically, it doesn't- all optimal solutions give the same happiness, so just pick one and call it
+                a day. From a
+                psychological perspective, however, I would argue this isn't the case.
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Over the course of daily life, we are faced with countless decisions- how to commute to work, what to
+                cook for dinner,
+                what time to go to the gym, and so forth. We weigh the benefits of each option and, using the
+                information we have on hand, eventually
+                come to a conclusion. However, we sometimes are paralyzed by indecision and must seek outside help. For
+                many, the choice is
+                made by random chance, namely the flip of a coin. For picking between two equal outcomes, a coin flip
+                offers an impartial judgement. But,
+                if you're anything like me, you watch the coin turn end over end in midair and think:
+            </p>
+            <p class="text-lg text-center italic leading-relaxed text-slate-100/80 indent-4 mb-4">
+                "I sure hope it comes up tails..."
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                We profess that we hold both options as equal, while secretly harboring a preference. It is not until
+                the decision is surrendered to outside
+                forces that this preference is brought to the surface. I strongly suspect that this phenomenon is
+                present in our matching problem. Though
+                there are likely several matchings that are equal according to whatever criteria is used, implicit
+                biases will move the needle, thereby
+                allowing the committee to converge upon the best solution.
+            </p>
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Adding Noise </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Attempting to model subconscious behavior is a fool's errand, so we will have to make do with a proxy.
+                We suggest the following modification:
+                if multiple optimal solutions exist, <span class="italic"> randomly select one to return</span>. The
+                idea is that if the user is dissatisfied with
+                a given pairing, the algorithm can be rerolled to get a new matching. This process can be repeated ad
+                infinitum until the user receives a matching he finds agreeable.
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Currently, our set of matchings $(M, \prec)$ exhibits a strict partial order, where $m_1 \prec m_2$ if
+                $m_1$ has a lower matching score than $m_2$.
+                Note that we cannot compare two optimal solutions in this framework, which is problematic. We want to
+                create a new ordering $\preceq$ on $M$ that
+                satisfies two criteria:
+            </p>
+            <ol class="list-decimal leading-relaxed list-inside pl-8 mb-4">
+                <li> If $m_1 \prec m_2$, then $m_1 \preceq m_2$ </li>
+                <li> For all $m_1, m_2 \in M$, either $m_1 \preceq m_2$ or $m_2 \preceq m_1$ </li>
+            </ol>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Essentially, we want a way to compare any two elements, while preserving the ordering of existing pairs.
+                In combinatorics, this process is referred to as a
+                <a href="https://en.wikipedia.org/wiki/Linear_extension" class="text-emerald-400 hover:text-amber-500">
+                    linear extension</a><sup id="ref-3"> <a href="#fn-3" >3</a> </sup>. We can accomplish this via augmenting
+                our preference matrix $C$. Specifically, we run our matching algorithm on a new matrix $C'$, defined as:
+                $$ C_{ij}' = C_{ij} + \epsilon_{ij} $$
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                where $\epsilon_{ij}$ are iid random variables drawn from a uniform distribution. To abide by the first
+                constraint, our $\epsilon_{ij}$ terms should be sufficiently small,
+                as to prevent the noise from overpowering the actual data. It turns out that $\epsilon_{ij} \sim U(0,
+                \frac{1}{n})$ suffices, which I arrived at after spending a signficant
+                amount of time attempting to reproduce a <a href="musings/nondeterminism.html"
+                    class="text-emerald-400 hover:text-amber-500"> nondeterministic bug</a> caused by a careless
+                choice of parameter.
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                To give a concrete example, let's consider a six person match with the following preference matrix:
+                $$ C =
+                \begin{pmatrix}
+                2 & 2 & 1 \\
+                2 & 2 & 1 \\
+                1 & 0 & 2 \\
+                \end{pmatrix}
+                $$
+                which has two optimal solutions: $\{(0,0), (1,1), (2,2)\}$ and $\{(0,1), (1,0), (2, 2)\}$. Now, consider
+                two plausible matrices $C_1$ and $C_2$,
+                obtained by augmenting $C$ with random noise:
+                $$ C_1 =
+                \begin{pmatrix}
+                2.4563 & 2.0389 & 1.5486\\
+                2.2235 & 2.8492 & 1.1923 \\
+                1.3342 & 0.8818 & 2.0134 \\
+                \end{pmatrix}
+
+                \qquad
+
+                C_2 =
+                \begin{pmatrix}
+                2.3849 & 2.9610 & 1.2232 \\
+                2.4021 & 2.0182 & 1.2924 \\
+                1.7263 & 0.0198 & 2.5621
+                \end{pmatrix}
+                $$
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                In both cases, the ties disappear, yielding a unique solution. More importantly, the answers differ and
+                correspond to the original two solutions!
+            </p>
+        </section>
+
+        <section class="mt-8">
+            <h3 class="text-xl text-amber-500 font-semibold"> Reflection </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                With the noise functionality settled, our matching algorithm is complete. MentorMatch is the best of
+                both worlds- offering the objectivity of
+                mathematical optimization while appeasing human psychology. As such, I propose the following
+                new-and-improved Matching Day:
+            </p>
+            <ol class="list-decimal leading-relaxed list-inside pl-8 mb-4">
+                <li> A list of all new members and eligible existing members is made public. </li>
+                <li> After a series of events where the two groups mingle, each new member generates of list of mentors
+                    they like and vice versa. </li>
+                <li class="italic"> Preference data is uploaded to MentorMatch and an initial optimal matching is
+                    generated </li>
+                <li class="italic"> The powers that be rerun the algorithm to their heart's content, stopping whenever
+                    satisfied </li>
+                <li> The list of matchings is published <span class="italic"> and the creator of MentorMatch is thanked profusely for his efforts </span> </li>
+            </ol>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+            which should hopefully streamline the whole process. This has the added benefit of being completely transparent, allowing the committee to 
+            use MentorMatch as a shield against any criticism. Unfortunately, MentorMatch also obsoletes the entire committee, save the person responsible 
+            for clicking the refresh button. Alas, such a sea change may prove to be mildly unpopular, so I expect my proposal to fall on deaf ears. Nevertheless,
+            MentorMatch was an enjoyable foray into the world of matching problems, so I'll call this valuable experience- even if the project never sees the 
+            light of day.
+            </p>
+
+            <p class="text-right"> □ </p>
+                
+        </section>
+    </main>
+
+    <footer class="max-w-5xl mx-auto px-6 py-10 text-sm text-slate-100/70">
+        <ol class="list-decimal list-inside mb-4">
+            <li id="fn-1"> 
+                An alternative idea is to seek a stable match, in which no two unmatched people stand to benefit by eloping together. This is usually referred to as the stable
+                marriage problem, first popularized by Gale and Shapley.
+            </li>
+            <li id="fn-2"> All preferred people are treated as equally valuable. If we were allowed to rank preferences, we would have to modify the preference formula to accommodate this. </li>
+            <li id="fn-3"> Linear extensions also require reflexivity and antisymmetry, which I omitted for brevity. Verifying that noise model is a linear extension is left as an exercise for the reader. </li>
+        </ol>
+        <p>© 2026 Colby Endres. Built for GitHub Pages.</p>
+    </footer>
+</body>
+
+</html>

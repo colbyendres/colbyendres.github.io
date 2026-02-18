@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Musings | Probability is Hard </title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body);"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ]
+            });
+        });
+        document.addEventListener('DOMContentLoaded', function () {
+            hljs.highlightAll();
+        });
+    </script>
+</head>
+
+<body class="bg-indigo-950 text-slate-100 min-h-screen">
+    <header class="max-w-5xl mx-auto px-6 py-8">
+        <nav class="flex flex-wrap items-center justify-between gap-4">
+            <div class="text-2xl font-semibold text-amber-500">Colby Endres</div>
+            <ul class="flex flex-wrap gap-6 text-emerald-400">
+                <li><a class="hover:text-amber-500 transition" href="../index.html">Home</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../education.html">Education</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../projects.html">Projects</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../musings.html">Musings</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../resume.html">Resumé</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-10">
+        <section class="space-y-4 border-b-2 border-dotted pb-6">
+            <h1 class="text-4xl font-bold text-amber-500">Probability is Hard</h1>
+            <p class="text-lg leading-relaxed">
+                The joys of debugging nondeterministic behavior
+            </p>
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Background </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                This drabble is in reference to a project called MentorMatch, which you can find a more
+                detailed writeup <a href="matching.html" class="text-emerald-400 hover:text-amber-500"> here</a>. To
+                give
+                a brief summary, I wanted to generate a bipartite matching between mentors and mentees that maximized
+                total happiness. This involved the construction of a preference matrix $C$, where each entry $C_{ij}$ is
+                an
+                integer representing the happiness for pairing mentor $i$ to mentee $j$. Our setup then turns into a
+                linear sum assignment
+                problem, which can be expediently solved via external libraries.
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                After completing the core algorithm, I decided to implement logic that, if the optimal solution was not
+                unqiue, a random optimal solution would be chosen.
+                This is where the problems began.
+            </p>
+
+        </section>
+
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> First Steps </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                I quickly settled on a common tie-breaking approach: random noise. The basic idea is that each element
+                of the matrix $C$ is perturbed
+                by some small random amount. This would break ties present in the preference matrix, forcing the
+                solution to be unique. Moreover,
+                since the random numbers generated differ each time the algorithm is called, different optimal solutions
+                to the original problem
+                will win out each time. Implementation is as simple as computing:
+                $$ C_{ij}' = C_{ij} + \varepsilon_{ij} $$
+                and running the solver on the matrix $C'$. The only caveat is the following statement must hold:
+            </p>
+
+            <p class="text-lg text-center italic leading-relaxed text-slate-100/80 indent-4 mb-4">
+                For any matches $m_1$ and $m_2$, if $s_C(m_1) < s_C(m_2)$, then $s_{C'}(m_1) < s_{C'}(m_2) \qquad (*)$
+                    </p>
+
+                    <p class="text-md leading-relaxed indent-4 mb-4">
+                        where $s_C( \cdot )$ and $s_{C'}( \cdot)$ are the happiness scores for matches generated by
+                        using $C$ and $C'$ respectively.
+                        This makes intuitive sense; if one matching is strictly better than another, a fair
+                        transformation shouldn't change that. All
+                        that's left to do is decide how to generate the $\varepsilon_{ij}$ terms.
+                    </p>
+
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> The Blunder </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Keeping the above constraint in mind, I pondered how to generate the noise terms. The key, I soon
+                realized,
+                was that the underlying probability distribution didn't matter. Rather, what needed to be controlled was
+                the maximum range of values that could be generated. To illustrate, consider the following preferences
+                matrix:
+                $$
+                C =
+                \begin{pmatrix}
+                2 & 1 & 2 \\
+                2 & 0 & 1 \\
+                0 & 2 & 2
+                \end{pmatrix}
+                $$
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The optimal solution $\{(0,2), (1,0), (2,1)\}$ is unique, with a maximum score of six. However, if we
+                add some particular noise
+                to two close values in the same row, we have:
+                $$
+                C' =
+                \begin{pmatrix}
+                2 & 1 & 2 \\
+                2 + {\color{red}0.2} & 0 & 1 + {\color{red}1.3} \\
+                0 & 2 & 2
+                \end{pmatrix}
+                $$
+                which gives the suboptimal solution $\{(0,0), (1,2), (2,1)\}$, a score of five. The critical flaw here
+                is that the difference
+                in noise outweighs the difference in preference values ($1.3-0.2 > 6-5$). This gives rise to the following
+                observation:
+            </p>
+
+            <p class="text-md text-center italic leading-relaxed text-slate-100/80 indent-4 mb-4">
+                If there exists two noise terms $\varepsilon_1$ and $\varepsilon_2$ in the same row or column such that
+                $|\varepsilon_1 - \varepsilon_2|>1$,
+                then there is a matrix $C$ such that $(*)$ does not hold.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                To prevent the above result from breaking our solver, we just need to enforce that the maximum range of
+                the noise's probability
+                distribution is no more than one. I settled on a simple noise model: $\varepsilon_{ij}
+                \overset{iid}{\sim}
+                U(0,1)$. Before moving on,
+                I wrote a handful of unit tests to ensure that the given noise distribution didn't return suboptimal
+                answers. All tests passed, so
+                I concluded that enforcing $|\varepsilon_1 - \varepsilon_2| \leq 1$ was both necessary and <span
+                    class="italic"> sufficient </span> for
+                preserving the original optimal solutions.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Surely nothing could go wrong...
+            </p>
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Something Goes Wrong </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Several weeks later, I was working on an unrelated task, namely migrating the frontend to TailwindCSS.
+                Once I was satisfied with
+                how everything looked, I opened up a pull request to merge my changes into the main branch. Earlier in
+                development, I set up a simple
+                CI pipeline that automatically runs the test suite upon receiving a pull request. To my surprise, my
+                frontend
+                changes were rejected, with GitHub Actions citing a lone failing test case:
+                <code> test_perfect_matching</code>. Somewhat confused, I
+                opened up the offending test:
+            </p>
+
+            <pre class="rounded-lg bg-slate-800 overflow-x-auto mb-4"><code class="language-python">
+                def test_perfect_match(self, session):
+                    PERFECT_PAIRS = [
+                        {'name': 'Alice', 'is_mentor': True},
+                        {'name': 'Bob', 'is_mentor': True},
+                        {'name': 'Charlie', 'is_mentor': True},
+                        {'name': 'Dan', 'is_mentor': False}
+                        {'name': 'Elise', 'is_mentor': False}
+                        {'name': 'Fiona', 'is_mentor': False}
+                    ]
+                    PREFS = [
+                        ('Alice', 'Dan'), ('Alice', 'Elise'), ('Alice', 'Fiona')
+                        ('Bob', 'Dan'), ('Bob', 'Fiona'),
+                        ('Charlie', 'Elise'), ('Charlie', 'Fiona'),
+                        ('Dan', 'Alice'), ('Dan', 'Bob'),
+                        ('Elise', 'Charlie'),
+                        ('Fiona', 'Alice'), ('Fiona, Charlie')
+                    ]
+                    p_info = add_people_with_prefs(session, PERFECT_PAIRS, PREFS)
+                    matcher = Matcher(p_info)
+                    matching = matcher.get_matching()
+                    for mentor, mentee, score in matching:
+                        if mentor == 'Alice':
+                            assert mentee == 'Fiona' and score == 2
+                        elif mentor == 'Bob':
+                            assert mentee == 'Dan' and score == 2
+                        else:
+                            assert mentee == 'Elise' and score == 2
+            </code></pre>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The test tripped on the <code class="language-python"> assert mentee == 'Fiona' </code> statement, with
+                the matcher somehow deciding
+                to pair Alice and Dan together. This choice forces Bob and Fiona together, which is a one-sided pairing.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                And worst of all?
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Everything worked just fine on my local machine. I reran the test suite a couple more times to make sure
+                and nothing came up. The only
+                evidence of my failure was a single red X appended to the end of my final commit message.
+            </p>
+        </section>
+
+        <section class="mt-8">
+            <h3 class="text-xl text-amber-500 font-semibold"> A Thousand Cuts </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                There could only be one explanation for the flaky test: nondeterminism. Since the seed data is fixed,
+                the
+                only divergence between the two environments is the noise matrix used by the test. Ordinarily, having
+                unit tests with randomized
+                data is asking for trouble, assuming you don't set a fixed seed for the PRNG. I had reasoned that any
+                differences in noise data
+                was benign, since our above analysis showed the end result would still be the same with an appropriately
+                chosen probability
+                distribution.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Unfortunately, it appears that this sentiment was misguided. Armed with these new conclusions, I
+                redoubled my efforts to reproduce the
+                mysterious bug. After about five minutes of continuously mashing the refresh button, I was rewarded with
+                a failing test, with the exact same
+                error message as before. Opening up the logs, I saw the following two matrices used by the matching
+                algorithm:
+                $$ C =
+                \begin{pmatrix}
+                2 & 1 & 2 \\
+                2 & 0 & 1 \\
+                0 & 2 & 2 \\
+                \end{pmatrix}
+                \qquad
+                C' =
+                \begin{pmatrix}
+                2.956 & 1.563 & 2.033 \\
+                2.114 & 0.571 & 1.741 \\
+                0.738 & 2.670 & 2.238 \\
+                \end{pmatrix}
+                $$
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Nothing jumped out at me at first glance. All of the noise values were within the prescribed ranges and
+                it didn't look like a floating
+                point arithmetic quirk was the culprit either. It wasn't until I put pen to paper that I realized what
+                went wrong:
+            </p>
+
+            <table
+                class="table-auto w-full text-center border mb-4 border-slate-100/20 border-collapse border-spacing-x-4 border-spacing-y-2">
+                <thead>
+                    <tr>
+                        <th class="px-3 py-2 border border-slate-100/20">Matching</th>
+                        <th class="px-3 py-2 border border-slate-100/20">Values Picked</th>
+                        <th class="px-3 py-2 border border-slate-100/20">Total Happiness in $C$</th>
+                        <th class="px-3 py-2 border border-slate-100/20">Total Happiness in $C'$</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> $m_{OPT}$ </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $C_{02}, C_{10}, C_{21}$ </td>
+                        <td class="px-3 py-2 border border-slate-100/20">$ 2 + 2 + 2 = 6$</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $2.033 + 2.114 + 2.670 \approx 6.817$</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> $m_{FAIL}$ </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $C_{00}, C_{12}, C_{21}$ </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $2 + 1 + 2 = 5$</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $2.956 + 1.741 + 2.670 \approx 7.367$</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                I had correctly identified that pairwise noise differences should not exceed one. However, I failed to
+                realize
+                that these errors accumulate across rows. Should an alternative solution have greater noise than the
+                optimal
+                in a sufficient number of pairs, the combined errors can snowball into a value greater than one. The
+                algorithm's
+                failure was not due a large single mistake, but rather death by a thousand cuts.
+            </p>
+        </section>
+
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Postmortem </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Thankfully, the fix was rather simple. Our goal is to enforce $E_k - E_{OPT} < 1$, where $E_{OPT}$ is
+                    the total accumlated noise for an optimal solution and $E_k$ the total noise for a suboptimal
+                    solution. If we instead choose $\varepsilon \overset{iid}{\sim} U(0, \frac{1}{n})$, some analysis
+                    gives: $$ \begin{align*} E_{k} - E_{OPT} &=\sum_{i=1}^n \varepsilon_i^{k} - \varepsilon_i^{OPT} \\
+                    &< \sum_{i=1}^n \left( \frac{1}{n} - 0 \right) \\ &< \frac{1}{n} \cdot n \\ &< 1 \\ \end{align*} $$
+                    as desired. Though this resolves the issue, I was curious: how often would my previous approach
+                    fail? I wrote a simple Monte Carlo simulation: <pre
+                    class="rounded-lg bg-slate-800 overflow-x-auto mb-4"><code class="language-python">
+                def test_fail_rate(trials):
+                    MAT = [
+                        [2, 1, 2],
+                        [2, 0, 1],
+                        [0, 2, 2]
+                    ]
+                    BEST_SCORE = 6
+                    fails = 0
+                    for _ in range(trials):
+                        noise = np.random.uniform(0, 1, (3,3))
+                        rows, cols = linear_sum_assignment(cost_matrix=MAT+noise, 
+                                                           maximize=True)
+                        score = sum([MAT[i][j] for i,j in zip(rows, cols)])
+                        if score < BEST_SCORE:
+                            fails += 1
+                    return fails / trials
+
+                print(test_fail_rate(10**6))
+            </code></pre>
+                    and received a failure rate of around 0.079. The natural next step is to provide theoretical
+                    justification.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                To start, denote $D$ as the smallest positive gap in happiness score between an optimal and suboptimal
+                model. Clearly,
+                $D \geq 1$, since we're working with integers. To make our lives easier, we will only consider matchings
+                where $D=1$
+                when calculating the probability of failure. Should this be true, the two matches likely differ by only
+                a transposition.
+                In our previous example,
+                $$
+                \pi_{OPT} = (0, 2, 1) \\
+                \pi_k = (1, 2) \\
+                \tau = (2,0)
+                $$
+                where we see that $\pi_{OPT} = \tau \circ \pi_k$. In other words, we can transform our second-best
+                solution into the optimal
+                simply by swapping the assignments of column 0 and column 2. The upshot is that the noise values we
+                collect only differ in two
+                places, as opposed to the maximum of $n$.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Suppose we have $\tau = (i, j)$ (i.e. we need to swap partners for column $i$ and $j$ to get the
+                optimal solution). Now set $U = \epsilon_{ai} + \epsilon_{bj}$ and $V = \epsilon_{ci} + \epsilon_{dj}$
+                to
+                be the noise sum in the two columns for the optimal and suboptimal solution respectively. Since $U$ and
+                $V$ are the sum of
+                two independent $U(0,1)$ distribution, they take on a triangular distribution:
+                $$
+                \begin{equation*}
+                f_U(u)=\begin{cases}
+                u & \text{if $0 \leq u < 1$} \\ 2-u & \text{if $1 \leq u \leq 2$} \end{cases} \end{equation*} $$ </p>
+
+                    <p class="text-md leading-relaxed indent-4 mb-4">
+                        We are interested in computing $\mathbb{P}(V - U \geq 1)$. The joint distribution $f_{U,V}(u,v)$
+                        has support $[0,2] \times [0,2]$,
+                        so after sketching the relevant region, we have to compute the following double integral:
+                        $$
+                        \mathbb{P}(V - U \geq 1) = \int_{0}^1 \int_{v+1}^2 f_{U,V}(u, v) du dv \\
+                        $$
+                    </p>
+
+                    <p class="text-md leading-relaxed indent-4 mb-4">
+                        Since $U$ and $V$ are independent, we can separate the joint distribution into the product of
+                        the marginals. Thus:
+                        $$
+                        \begin{align*}
+                        \mathbb{P}(V - U \geq 1) &= \int_{0}^1 \int_{v+1}^2 f_{U}(u) \cdot f_{V}(v) du dv \\
+                        &= \int_{0}^1 \int_{v+1}^2 v \cdot (2- u) du dv \\
+                        &= \int_{0}^1 v \cdot \frac{1}{2} \cdot (v-1)^2 dv \\
+                        &= \frac{1}{6}v^4 - \frac{1}{3}v^3 + \frac{1}{4}v^2 \Biggr\rvert_{v=0}^{v=1} \\
+                        &= \frac{1}{12}
+                        \end{align*}
+                        $$
+                        which is pretty close to the Monte Carlo simulation (7.9% vs 8.3%)<sup id="ref-1"> <a href="#fn-1" >1</a></sup>.
+                    </p>
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Closing Thoughts </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                With the noise distribution adjusted, my algorithm was working as intended, this time for 
+                good. This was certainly one of the more pernicious bugs I've solved, largely due to its 
+                low probability of occuring. Luckily, the small test case of $n=3$ was able to bring this issue to light. 
+                As $n \to \infty$, the law of large numbers will push the total noise differences towards their expected 
+                value of zero, thus silencing the issue.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Here's hoping my next problem will be easier to fix. My finger still hurts from clicking the refresh 
+                button over and over...
+            </p>
+        </section>
+
+        <p class="text-right"> □ </p>
+
+    </main>
+
+    <footer class="max-w-5xl mx-auto px-6 py-10 text-sm text-slate-100/70">
+        <ol class="list-decimal list-inside mb-4">
+            <li id="fn-1"> 
+                We failed to account for multiple matchings that have $D=1$, in which failure occurs when at least one of them beats the optimum.
+                Thus $\mathbb{P}(\text{fail}) = 1 - (1 - \frac{1}{12})^d$, where $d$ is the number of matches satisfying $D=1$. In our case, $d=1$,
+                so the calculation simplifies to $\frac{1}{12}$. 
+            </li>
+        </ol>
+        <p>© 2026 Colby Endres. Built for GitHub Pages.</p>
+    </footer>
+</body>
+
+</html>

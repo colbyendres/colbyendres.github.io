@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resumé | Colby Endres</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-indigo-950 text-slate-100 min-h-screen">
+    <header class="max-w-5xl mx-auto px-6 py-8">
+      <nav class="flex flex-wrap items-center justify-between gap-4">
+        <div class="text-2xl font-semibold text-amber-500">Colby Endres</div>
+        <ul class="flex flex-wrap gap-6 text-emerald-400">
+          <li><a class="hover:text-amber-500 transition" href="index.html">Home</a></li>
+          <li><a class="hover:text-amber-500 transition" href="education.html">Education</a></li>
+          <li><a class="hover:text-amber-500 transition" href="projects.html">Projects</a></li>
+          <li><a class="hover:text-amber-500 transition" href="musings.html">Musings</a></li>
+          <li><a class="hover:text-amber-500 transition" href="resume.html">Resumé</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-10">
+      <section class="space-y-4">
+        <h1 class="text-4xl font-bold text-amber-500">Resumé</h1>
+        <p class="text-lg leading-relaxed">
+          A current snapshot of my experience and academic background. Use the download link if the
+          embedded viewer does not load.
+        </p>
+        <a class="inline-flex items-center gap-2 text-emerald-400 hover:text-amber-500 transition" href="pdfs/EndresResume.pdf">
+          Download Resumé (PDF)
+        </a>
+      </section>
+
+      <section class="mt-8">
+        <div class="rounded-xl border border-emerald-400/40 bg-indigo-950/60 p-4">
+          <object data="pdfs/EndresResume.pdf" type="application/pdf" class="w-full h-[70vh]">
+            <p class="text-sm text-slate-100/70">
+              Your browser could not display the PDF. Please use the download link above.
+            </p>
+          </object>
+        </div>
+      </section>
+    </main>
+
+    <footer class="max-w-5xl mx-auto px-6 py-10 text-sm text-slate-100/70">
+      <p>Last updated February 2026.</p>
+    </footer>
+  </body>
+</html>
