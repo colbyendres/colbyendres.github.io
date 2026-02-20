@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Musings | Really Fast Primality Testing </title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body);"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ]
+            });
+        });
+        document.addEventListener('DOMContentLoaded', function () {
+            hljs.highlightAll();
+        });
+    </script>
+</head>
+
+<body class="bg-indigo-950 text-slate-100 min-h-screen">
+    <header class="max-w-5xl mx-auto px-6 py-8">
+        <nav class="flex flex-wrap items-center justify-between gap-4">
+            <div class="text-2xl font-semibold text-amber-500">Colby Endres</div>
+            <ul class="flex flex-wrap gap-6 text-emerald-400">
+                <li><a class="hover:text-amber-500 transition" href="../index.html">Home</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../education.html">Education</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../projects.html">Projects</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../musings.html">Musings</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../resume.html">Resumé</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-10">
+        <section class="space-y-4 border-b-2 border-dotted pb-6">
+            <h1 class="text-4xl font-bold text-amber-500">Really Fast Primality Testing</h1>
+            <p class="text-lg leading-relaxed">
+                Using HPC resources to trivialize a homework problem
+            </p>
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Background </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The final course I took for my master's degree was <a
+                    href="https://artsci.tamu.edu/mathematics/academics/courses/descriptions/math673.html"
+                    class="text-emerald-400 hover:text-amber-500"> MATH 673: Mathematics of Cryptography</a>, which as
+                the name suggests, discusses
+                the mathematical underpinnings of modern cryptography. For the uninitiated, cryptography deals with the
+                problem of maintaining
+                private communication over insecure channels. Modern techniques draw heavily from mathematics,
+                particularly number theory.
+                One of the core building blocks for many cryptosystems are prime numbers, mainly due to the nice
+                algebraic properties granted
+                by doing arithmetic modulo $p$.
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                To make brute-force attacks infeasible, primes chosen for cryptographic purposes
+                must be quite large. This is a somewhat nontrivial task, since primes have a natural density
+                of $\frac{1}{\log n}$ (i.e. primes get "rarer" as $n$ increases). As such, I was unsurprised to
+                see the following homework question:
+            </p>
+            <p class="text-lg text-center italic text-slate-300 mb-4">
+                "Write an algorithm to determine if $n$ is prime, with
+                a false positive rate of no more than $2^{-40}$. Verify that 256866751887531116521374772376435790631 is
+                prime."
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The above number is quite small by cryptographic standards, fitting in a measly 128 bits. My initial
+                strategy was to write a quick Python script, which should take no longer than a couple
+                milliseconds for verification. I kept reading and found an additional footnote:
+            </p>
+            <p class="text-lg text-center italic text-slate-300 mb-4">
+                "Report the wall clock time, as well as your host machine's architecture and OS"
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                This statement gave me pause. I've been asked to benchmark my code before, but that was for my
+                computer architecture and parallel computing courses. To receive such a request for
+                a <span class="italic"> mathematics</span> course was completely alien to me. Most math
+                students treat programming as a necessary evil and are thoroughly uninterested in
+                writing optimized software.
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The most likely explanation for this addendum is to emphasize the role of hardware in security.
+                A system that may take years to break on a personal laptop can be cracked in mere seconds on a
+                supercomputer. With the current proliferation of hardware accelerators like GPUs and TPUs, this
+                lesson is becoming more relevant by the day. However, I believed the message contained a second, hidden
+                meaning. Buried within the discussion of the effects of compute scaling is an
+                unspoken challenge- who can write the most performant algorithm?
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Very well then. I accept this challenge.
+            </p>
+
+        </section>
+
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> The Naive Approach </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Programming for mathematics courses tends to follow the path of least resistance. Performance
+                optimizations
+                and good software engineering practices tend to take a backseat to ease of development. This naturally
+                leads
+                to students to gravitate towards Python, so that's where I will begin. Below is a naive Python
+                implementation
+                of the Miller-Rabin primality test:
+            </p>
+
+            <pre class="rounded-lg bg-slate-800 overflow-x-auto mb-4"><code class="language-python">
+            def power_of_two_and_odd(n):
+                """ Factor n = 2^s * d, where d is odd """
+                s, d = 0, n
+                while d % 2 == 0:
+                    d //= 2
+                    s += 1
+                return s, d
+            
+            def naive_miller_rabin(n, p):
+                """ Determine if n is probably prime, with false positive rate < 2^-p """
+                trials = p // 2
+                s, d = power_of_two_and_odd(n-1)
+
+                for _ in range(trials):
+                    a = randint(2, n-2)
+                    # Strong probable prime base a, go to next witness
+                    if pow(a, d, n) == 1:
+                        continue
+                    
+                    curr_pow = d # 2^r * d for 0 <= r < s
+                    is_witness = True
+                    for r in range(s):
+                        # Strong probable prime base a, go to next witness
+                        if pow(a, curr_pow, n) == n-1:
+                            is_witness = False
+                            break
+                        curr_pow *= 2
+                    
+                    if is_witness:
+                        return False # definitely composite
+                
+                return True # probably prime
+            </code></pre>
+
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                This is effectively a one-to-one translation of the pseudocode given by <a
+                    href="https://en.wikipedia.org/wiki/Miller–Rabin_primality_test"
+                    class="text-emerald-400 hover:text-amber-500"> Wikipedia</a>. On a 2019 MacBook Pro with an i9 and 16 GB of
+                RAM, I was
+                able to verify the primality of 256866751887531116521374772376435790631 in just 1.37 ms.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                With already a relatively short execution time, it appears that we need to up the ante to make
+                performance
+                optimizations worthwile. As such, we turn our attention towards the <a
+                    href="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf"
+                    class="text-emerald-400 hover:text-amber-500"> NIST standards</a> for digital signatures. Contained
+                within the appendices
+                is the following table:
+            </p>
+
+            <table
+                class="table-auto w-full text-center border mb-4 border-slate-100/20 border-collapse border-spacing-x-4 border-spacing-y-2">
+                <thead>
+                    <tr>
+                        <th class="px-3 py-2 border border-slate-100/20">Parameters</th>
+                        <th class="px-3 py-2 border border-slate-100/20">M-R Only</th>
+                        <th class="px-3 py-2 border border-slate-100/20">M-R Only</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> $p$ and $q$: 1024 bits </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> Error probability = $2^{-100}$</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> Error probability = $2^{-112}$</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> $p$ and $q$: 2048 bits </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> Error probability = $2^{-100}$</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> Error probability = $2^{-144}$</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                These are the requirements for RSA, where $p$ and $q$ refer to the secret primes that are multiplied
+                together
+                as part of the public key. Since these standards are designed to withstand attacks from real adversaries
+                as opposed
+                to educating budding mathematicians, they are significantly more stringent than our homework problem.
+                Indeed, even
+                the weakest requirement, verifying 1024 bit primes with an error tolerance of $2^{-100}$, takes 409 ms
+                using
+                my naive script. That's nearly a 300x slowdown!
+            </p>
+
+
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Obvious Optimizations </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                There are two immediate optimizations that can be made to the naive Python routine. The first is to
+                apply strength
+                reduction to the <code class="language-python"> power_of_two_and_odd </code> function. Division and
+                modulo are
+                relatively expensive operations for the CPU to conduct and, in certain cases, we can replace them with
+                cheaper
+                alternatives<sup id="ref-1"> <a href="#fn-1">1</a></sup>. Lucky for us, we can make the following substitutions:
+            <ul class="list-disc leading-relaxed list-inside pl-8 mb-4">
+                <li> <code class="language-python"> while(n % 2 == 0): </code> $\implies$ <code
+                        class="language-python"> while(~n & 1): </code> </li>
+                <li> <code class="language-python"> n /= 2 </code> $\implies$ <code
+                        class="language-python"> n >>= 1</code> </li>
+            </ul>
+            to rely on bitwise operations. These instructions take only a single clock cycle to execute on most modern
+            processors.
+            This should cut down execution time, but since this function is only called once, such gains are probably
+            slim.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The second, and more notable improvement, can be made inside the inner for loop. For each potential
+                witness $a$, we
+                test:
+                $$
+                a^{2^r \cdot d} \equiv -1 \bmod n \quad \forall r \in \{0, 1, \dots s-1\}
+                $$
+                which involves at most $s$ comparisons if none of the values are congruent to $-1 \mod n$. At present,
+                we keep track
+                of $2^r \cdot d$ in the variable <code> curr_pow </code>and compute <code> pow(a, curr_pow, n) </code>
+                each iteration.
+                Each call to <code> pow</code> takes $\mathcal{O}(\log \text{curr\_pow})$ multiplications, giving the
+                inner loop a runtime
+                of $\mathcal{O}(s \cdot \log n)$. We can eliminate the expensive call to <code>pow</code> by noting the
+                following:
+                $$
+                a_k = a_{k-1} \cdot a_{k-1} \quad a_0 = a^d
+                $$
+                which computes the same values as before, but only needs one multiplication per loop iteration (This is
+                effectively the
+                <a href="https://en.wikipedia.org/wiki/Exponentiation_by_squaring"
+                    class="text-emerald-400 hover:text-amber-500"> fast squaring
+                    algorithm </a>, done modulo $n$). Our new algorithm looks like:
+            </p>
+
+            <pre class="rounded-lg bg-slate-800 overflow-x-auto mb-4"><code class="language-python">
+                def fast_power_of_two_and_odd(n):
+                    """ Factor n = 2^s * d, where d is odd """
+                    s, d = 0, n
+                    while d % 2 == 0:
+                        d >>= 1
+                        s += 1
+                    return s, d
+                
+                def fast_miller_rabin(n, p):
+                    """ Determine if n is probably prime, with false positive rate < 2^-p """
+                    trials = p // 2
+                    s, d = fast_power_of_two_and_odd(n-1)
+
+                    for _ in range(trials):
+                        a = randint(2, n-2)
+                        curr = pow(a, d, n)
+                        # Strong probable prime base a, find next witness
+                        if curr == 1:
+                            continue
+                        
+                        is_witness = True
+                        for r in range(s):
+                            # Strong probable prime base a, find next witness
+                            if curr == n-1:
+                                is_witness = False
+                                break
+                            curr = (curr * curr) % n
+                        
+                        if is_witness:
+                            return False
+                    
+                    return True
+            </code>
+            </pre>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Running this on the same prime as before, I get a time of 182 ms, which is over a 2x speedup over the
+                naive
+                approach. This is a great improvement for such low-hanging fruit, but we can do much better.
+            </p>
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> The Obligatory C++ Rewrite </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                We could explore other potential optimizations like unrolling the outer loop or generating all of our
+                witnesses at once to avoid repeated calls to <code>randint</code>. However, the path forward if we're
+                truly dedicated for performance is obvious- ditch Python. There's a couple of reasons for why this move
+                is necessary:
+            <ul class="list-disc leading-relaxed list-inside pl-8 mb-4">
+                <li> Python, by dint of being an interpreted language, has a signficantly higher runtime overhead
+                    compared
+                    to a compiled language. Bytecode translation, dynamic type checking, and garbage collection all must
+                    be done at runtime by the interpreter. </li>
+                <li> Modern compilers offer a slew of optimization passes. The programmer can rely on the wisdom of
+                    decades of compiler engineers (or <a
+                        href="https://www.anthropic.com/engineering/building-c-compiler"
+                        class="text-emerald-400 hover:text-amber-500"> Claude</a>, I guess) to generate optimized code
+                    for a particular architecture.
+                </li>
+                <li> True parallelism is impossible in Python, due to the GIL only permitting one thread to
+                    access the Python interpreter at a time. There is concurrency support via the
+                    <code> multithreading </code>
+                    library, but performance gains are minimal for CPU-bound tasks.
+                </li>
+            </ul>
+
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                I'll be rewriting the above kernel in C++, since it's a language I'm familiar with.
+                C++, along with its predecessor C, is the de facto choice for performance critical
+                code. All roads lead to Rome, I suppose.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                There's really only one sticking point for the migration: integer representation. In Python,
+                integers can have arbitrary width, so we don't need to worry about overflow. However, C++ only
+                has fixed-width integers (unless you're building with the LLVM toolchain, which has
+                <code> llvm::APInt</code>),
+                so I'll need to find a third-party library to avoid rolling my own <code>BigInt</code> class.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                I settled on <a href="https://libntl.org" class="text-emerald-400 hover:text-amber-500"> NTL</a>, which
+                provides
+                arbitrary precision integers and a wide array of number-theoretic functions. It also happens to be
+                thread-safe
+                and has a built-in thread pool for automatically parallelizing tasks (more on this later). Here's what
+                the
+                C++ equivalent looks like:
+
+            <pre class="rounded-lg bg-slate-800 overflow-x-auto mb-4"><code class="language-cxx">
+                    bool serial_miller_rabin(const ZZ *n, size_t p) {
+                        // Set the modulus for Z/pZ to n
+                        ZZ_p::init(*n);
+                        ZZ d = (*n) - 1;
+                        size_t s = 0;
+                        while (d % 2 == 0) {
+                            d >>= 1;
+                            s++;
+                        }
+                        ZZ_p a;
+                        ZZ_p curr;
+                        const size_t trials = p / 2;
+                        for (size_t i = 0; i < trials; i++) {
+                            random(a);
+                            // a = 0 will be mistakenly considered a witness, so skip it
+                            // a = +/- 1 will never witness a composite, so skip it
+                            if (a == 0 || a == 1 || a + 1 == 0) continue;
+                            power(curr, a, d); // curr = a^d mod n
+                            if (curr == 1) continue; // pseudoprime, go to next witness
+                            
+                            bool is_witness = true;
+                            for (size_t j = 0; j < s; j++) {
+                                if (curr + 1 == 0) {
+                                    is_witness = false; // pseudoprime, go to next witness
+                                    break;
+                                }
+                                curr *= curr;
+                            }
+
+                            if (is_witness) return false; // definitely composite
+                        }
+
+                        return true; // probably prime
+                    }
+                </code></pre>
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                <code> ZZ </code> and <code> ZZ_p </code> are NTL's arbitrary-precision integer classes, where
+                the latter does arithmetic in $(\mathbb{Z}/p\mathbb{Z})^*$. This is especially convenient, since
+                we don't have to keep track of the modulus ourselves. Other than that, this is very similar
+                to our Python setup. How does it perform?
+            <pre class="rounded-lg bg-slate-900 p-4 overflow-x-auto mb-4 font-mono text-sm text-emerald-400"><code class="language-bash"><span class="text-amber-500">cendres@MacBookPro</span> <span class="text-sky-400">miller-rabin</span> <span class="text-slate-100">%</span> cat prime1024.txt | ./miller-rabin
+wall time: 15.87ms
+</code></pre>
+
+            Quite well, by the look of it. This is a tenfold improvement over the Python version, making our
+            port well worth the effort.
+            </p>
+        </section>
+
+        <section class="mt-8">
+            <h3 class="text-xl text-amber-500 font-semibold"> Progress So Far </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                For the sake of tracking our progress, let's do a side-by-side comparison of the three algorithms
+                we've written so far. We'll test the four parameter sets ($n$ = number of bits, $p$ = maximum fail
+                tolerance), as outlined by NIST. Each algorithm will
+                be run 100 times, as to spread out the effect of context switches, and we'll report a 95% confidence
+                interval for the true mean running time. Below are the results of the experiment:
+            </p>
+
+            <table
+                class="table-auto w-full text-center border mb-4 border-slate-100/20 border-collapse border-spacing-x-4 border-spacing-y-2">
+                <thead>
+                    <tr>
+                        <th class="px-3 py-2 border border-slate-100/20">Algorithm</th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=1024$, $p=2^{-100}$ </th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=1024$, $p=2^{-112}$ </th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=2048$, $p=2^{-100}$ </th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=2048$, $p=2^{-144}$ </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> Naive Python </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $409.2 \pm 4.4$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $449.1 \pm 4.6$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $2520 \pm 27$ ms</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $3694 \pm 32$ ms</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> Optimized Python </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $182.6 \pm 1.5$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $203.6 \pm 4.6$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $1119 \pm 9$ ms</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $1586 \pm 3$ ms</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> Serial C++ w/ NTL </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $16.0 \pm 0.1$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $17.9 \pm 0.2$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $115.4 \pm 0.3$ ms</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $166.8 \pm 0.7$ ms</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Our C++ application, unsurprisingly, sweeps the competition. There is still one avenue we have yet to pursue:
+                multithreading.
+            </p>
+        </section>
+
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Adding Threads </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The difficult of parallelizing a single-threaded program can range from trivial to incredibly
+                complicated.
+                Thankfully, our primality test is <a href="https://en.wikipedia.org/wiki/Embarrassingly_parallel"
+                    class="text-emerald-400 hover:text-amber-500"> embarassingly parallel</a>, since no
+                communication between threads is necessary. We can partition the witness candidates amongst all of our
+                threads
+                and have each thread modify a global variable indicating if a witness has been found. Even better,
+                this partitioning is automatically handled by the <code> NTL_EXEC_RANGE </code> macro, which acts
+                similar to OpenMP's <code> #pragma omp parallel for</code>. All we have to do is move the initialization
+                of our integers inside the critical section to make them thread local. Here's our fully parallelized
+                code:
+            </p>
+
+            <pre class="rounded-lg bg-slate-800 overflow-x-auto mb-4"><code class="language-cxx">
+                    bool parallel_miller_rabin(const ZZ *n, size_t p) {
+                        ZZ d = (*n) - 1;
+                        const size_t trials = p / 2;
+                        size_t s = 0;
+                        while (d % 2 == 0) {
+                            d >>= 1;
+                            s++;
+                        }
+                        
+                        std::atomic_bool is_prob_prime = true;
+
+                        // Start critical section
+                        NTL_EXEC_RANGE(trials, first, last)
+                        ZZ_p a;           // thread local
+                        ZZ_p curr;        // thread local
+                        ZZ_p::init(*n); // reinit, since only main thread initialized modulus
+                        for (size_t i = first; i < last; i++) {
+                            random(a);
+                            // a = 0 will be mistakenly considered a witness, so skip it
+                            // a = +/- 1 will never witness a composite, so skip it
+                            if (a == 0 || a == 1 || a + 1 == 0) continue;
+                            power(curr, a, d); // curr = a^d mod n
+                            if (curr == 1) continue; // pseudoprime, go to next witness
+                            
+                            bool is_witness = true;
+                            for (size_t j = 0; j < s; j++) {
+                                if (curr + 1 == 0) {
+                                    is_witness = false; // pseudoprime, go to next witness
+                                    break;
+                                }
+                                curr *= curr;
+                            }
+
+                            if (is_witness) {
+                                is_probably_prime.store(false);
+                                break;
+                            }
+                        }
+
+                        // End critical section
+                        NTL_EXEC_RANGE_END
+
+                        return is_probably_prime.load();
+                    }
+                </code></pre>
+
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The only synchronization primitive we need is a single <code
+                    class="language-cxx"> std::atomic_bool</code>,
+                which a thread will atomically set to <code> false </code> should it find a witness. Doing this
+                non-atomically
+                is fine on paper, as any races to store <code> false </code> are benign. However, <span class="italic">
+                    any </span>
+                data race involving at least one write is UB in C++, so we make this atomic to avoid the dreaded nasal
+                demons.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Let's see how we did with a simple strong scaling experiment. Using the same parameters as last time, we
+                successively double the number of threads and obtain:
+            </p>
+
+            <table
+                class="table-auto w-full text-center border mb-4 border-slate-100/20 border-collapse border-spacing-x-4 border-spacing-y-2">
+                <thead>
+                    <tr>
+                        <th class="px-3 py-2 border border-slate-100/20"># of Threads</th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=1024$, $p=2^{-100}$ </th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=1024$, $p=2^{-112}$ </th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=2048$, $p=2^{-100}$ </th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=2048$, $p=2^{-144}$ </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> $t=2$</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $8.43 \pm 0.13$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $9.46 \pm 0.11$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $59.44 \pm 0.27$ ms</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $87.32 \pm 0.81$ ms</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> $t=4$</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $4.65 \pm 0.08$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $5.06 \pm 0.10$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $32.99 \pm 0.39$ ms</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $45.68 \pm 0.22$ ms</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> $t=8$ </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $2.91 \pm 0.06$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $3.07 \pm 0.08$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $21.33 \pm 0.37$ ms</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $27.56 \pm 0.39$ ms</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> $t=16$ </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $3.07 \pm 0.05$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $3.40 \pm 0.06$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $21.02 \pm 0.34$ ms</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $26.66 \pm 0.24$ ms</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                This is great- we have perfect strong scaling for up to eight threads! Further scaling is ineffective
+                because
+                there's not enough work to go around. For a failure threshold of $2^{-p}$, we only need to check
+                $\frac{p}{2}$ witnesses
+                <sup id="ref-2"> <a href="#fn-2">2</a></sup>. Even at the maximum tolerance of $2^{-144}$, each of the
+                16
+                threads only has around five candidates to check.
+            </p>
+
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Closing Thoughts </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                With the parallelization effort a resounding success, I
+                submit the following results:
+            </p>
+
+            <table
+                class="table-auto w-full text-center border mb-4 border-slate-100/20 border-collapse border-spacing-x-4 border-spacing-y-2">
+                <thead>
+                    <tr>
+                        <th class="px-3 py-2 border border-slate-100/20">Algorithm</th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=1024$, $p=2^{-100}$ </th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=1024$, $p=2^{-112}$ </th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=2048$, $p=2^{-100}$ </th>
+                        <th class="px-3 py-2 border border-slate-100/20">$n=2048$, $p=2^{-144}$ </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> Naive Python </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $409.2 \pm 4.4$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $449.1 \pm 4.6$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $2520 \pm 27$ ms</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $3694 \pm 32$ ms</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> C++/NTL with $t=8$ </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $2.91 \pm 0.06$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $3.07 \pm 0.08$ ms </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $21.33 \pm 0.37$ ms</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $27.56 \pm 0.39$ ms</td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2 border border-slate-100/20"> Speedup Factor </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $141\times$ faster</td>
+                        <td class="px-3 py-2 border text-amber-500  border-slate-100/20"> $146\times$ faster</td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $118\times$ faster </td>
+                        <td class="px-3 py-2 border border-slate-100/20"> $134\times$ faster</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                There is, <a href="https://en.wikipedia.org/wiki/Full-employment_theorem" class="text-emerald-400 hover:text-amber-500">
+                undoubtedly</a>, more I could do to keep pushing down the execution time. Maybe using separate processes
+                instead of threads would be better. Perhaps I could rewrite the entire codebase in Rust, as that 
+                seems to be in vogue. However, I am content with my work and am uninterested with pursuing
+                diminishing returns.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Most importantly, I have carried on a <a href="https://xkcd.com/1205" class="text-emerald-400 hover:text-amber-500">time-honored tradition </a> for developers:
+                spending hours improving a task just to save a few hundred milliseconds. Time well spent.
+            </p>
+
+        </section>
+
+        <p class="text-right"> □ </p>
+
+    </main>
+
+    <footer class="max-w-5xl mx-auto px-6 py-10 text-sm text-slate-100/70">
+        <ol class="list-decimal list-inside mb-4">
+            <li id="fn-1">
+                Most modern compilers will do this automatically (see <a href="https://godbolt.org/z/ET9hazq49" class="text-emerald-400 hover:text-amber-500"> here </a> for a example with gcc). No 
+                such modification will be performed to Python's bytecode, so we must do the substitution ourself.
+            </li>
+            <li id="fn-2">
+                It is well-known that, for composite $n$, at most $\frac{1}{4}$ the elements of
+                $(\mathbb{Z}/n\mathbb{Z})^*$ are Miller-Rabin liars.
+                Thus, the probability that a composite survives $k$ rounds of Miller-Rabin is no more than $4^{-k}$,
+                from
+                which it follows that taking $k = \frac{p}{2}$ leads to a false positive rate of at most $2^{-p}$.
+            </li>
+        </ol>
+        <p>© 2026 Colby Endres. Built for GitHub Pages.</p>
+    </footer>
+</body>
+
+</html>
