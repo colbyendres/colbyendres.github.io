@@ -351,9 +351,9 @@
                 C++ equivalent looks like:
 
             <pre class="rounded-lg bg-slate-800 overflow-x-auto mb-4"><code class="language-cxx">
-                    bool serial_miller_rabin(const ZZ *n, size_t p) {
+                    bool serial_miller_rabin(const ZZ& n, size_t p) {
                         // Set the modulus for Z/pZ to n
-                        ZZ_p::init(*n);
+                        ZZ_p::init(n);
                         ZZ d = (*n) - 1;
                         size_t s = 0;
                         while (d % 2 == 0) {
@@ -408,7 +408,7 @@ wall time: 15.87ms
                 For the sake of tracking our progress, let's do a side-by-side comparison of the three algorithms
                 we've written so far. We'll test the four parameter sets ($n$ = number of bits, $p$ = maximum fail
                 tolerance), as outlined by NIST. Each algorithm will
-                be run 100 times, as to spread out the effect of context switches, and we'll report a 95% confidence
+                be run 100 times, as to spread out the effect of context switches<sup id="ref-2"> <a href="#fn-2">2</a></sup>, and we'll report a 95% confidence
                 interval for the true mean running time. Below are the results of the experiment:
             </p>
 
@@ -472,8 +472,8 @@ wall time: 15.87ms
             </p>
 
             <pre class="rounded-lg bg-slate-800 overflow-x-auto mb-4"><code class="language-cxx">
-                    bool parallel_miller_rabin(const ZZ *n, size_t p) {
-                        ZZ d = (*n) - 1;
+                    bool parallel_miller_rabin(const ZZ& n, size_t p) {
+                        ZZ d = n - 1;
                         const size_t trials = p / 2;
                         size_t s = 0;
                         while (d % 2 == 0) {
@@ -487,7 +487,7 @@ wall time: 15.87ms
                         NTL_EXEC_RANGE(trials, first, last)
                         ZZ_p a;           // thread local
                         ZZ_p curr;        // thread local
-                        ZZ_p::init(*n); // reinit, since only main thread initialized modulus
+                        ZZ_p::init(n); // reinit, since only main thread initialized modulus
                         for (size_t i = first; i < last; i++) {
                             random(a);
                             // a = 0 will be mistakenly considered a witness, so skip it
@@ -506,7 +506,9 @@ wall time: 15.87ms
                             }
 
                             if (is_witness) {
-                                is_probably_prime.store(false);
+                                // Sequential consistency is unnecessary
+                                // i.e. agreeing on a write order is irrelevant
+                                is_probably_prime.store(false, std::memory_order_relaxed);
                                 break;
                             }
                         }
@@ -514,7 +516,7 @@ wall time: 15.87ms
                         // End critical section
                         NTL_EXEC_RANGE_END
 
-                        return is_probably_prime.load();
+                        return is_probably_prime.load(std::memory_order_relaxed);
                     }
                 </code></pre>
 
@@ -583,7 +585,7 @@ wall time: 15.87ms
                 because
                 there's not enough work to go around. For a failure threshold of $2^{-p}$, we only need to check
                 $\frac{p}{2}$ witnesses
-                <sup id="ref-2"> <a href="#fn-2">2</a></sup>. Even at the maximum tolerance of $2^{-144}$, each of the
+                <sup id="ref-3"> <a href="#fn-3">3</a></sup>. Even at the maximum tolerance of $2^{-144}$, each of the
                 16
                 threads only has around five candidates to check.
             </p>
@@ -659,6 +661,11 @@ wall time: 15.87ms
                 such modification will be performed to Python's bytecode, so we must do the substitution ourself.
             </li>
             <li id="fn-2">
+                This is somewhat against the suggestion provided by Python's <a href="https://docs.python.org/3/library/timeit.html" class="text-emerald-400 hover:text-amber-500"> timeit </a> module,
+                which recommends reporting the minimum time instead. The idea is that the fastest time likely had the fewest interrupts and thus provides the most accurate runtime for <span class="italic">
+                just </span> our function. However, I'm more interested in the perceived runtime by the user, which naturally must account for interference by the operating system.
+            </li>
+            <li id="fn-3">
                 It is well-known that, for composite $n$, at most $\frac{1}{4}$ the elements of
                 $(\mathbb{Z}/n\mathbb{Z})^*$ are Miller-Rabin liars.
                 Thus, the probability that a composite survives $k$ rounds of Miller-Rabin is no more than $4^{-k}$,
