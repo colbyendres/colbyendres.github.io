@@ -193,12 +193,12 @@
                 <a href="https://en.wikipedia.org/wiki/Linear_extension" class="text-emerald-400 hover:text-amber-500">
                     linear extension</a><sup id="ref-3"> <a href="#fn-3" >3</a> </sup>. We can accomplish this via augmenting
                 our preference matrix $C$. Specifically, we run our matching algorithm on a new matrix $C'$, defined as:
-                $$ C_{ij}' = C_{ij} + \epsilon_{ij} $$
+                $$ C_{ij}' = C_{ij} + \varepsilon_{ij} $$
             </p>
             <p class="text-md leading-relaxed indent-4 mb-4">
-                where $\epsilon_{ij}$ are iid random variables drawn from a uniform distribution. To abide by the first
-                constraint, our $\epsilon_{ij}$ terms should be sufficiently small,
-                as to prevent the noise from overpowering the actual data. It turns out that $\epsilon_{ij} \sim U(0,
+                where $\varepsilon_{ij}$ are iid random variables drawn from a uniform distribution. To abide by the first
+                constraint, our $\varepsilon_{ij}$ terms should be sufficiently small,
+                as to prevent the noise from overpowering the actual data. It turns out that $\varepsilon_{ij} \sim U(0,
                 \frac{1}{n})$ suffices, which I arrived at after spending a signficant
                 amount of time attempting to reproduce a <a href="musings/nondeterminism.html"
                     class="text-emerald-400 hover:text-amber-500"> nondeterministic bug</a> caused by a careless
@@ -218,18 +218,18 @@
                 obtained by augmenting $C$ with random noise:
                 $$ C_1 =
                 \begin{pmatrix}
-                2.4563 & 2.0389 & 1.5486\\
-                2.2235 & 2.8492 & 1.1923 \\
-                1.3342 & 0.8818 & 2.0134 \\
+                2.2563 & 2.0389 & 1.0486\\
+                2.2235 & 2.3014 & 1.1923 \\
+                1.192 & 0.2541 & 2.0134 \\
                 \end{pmatrix}
 
                 \qquad
 
                 C_2 =
                 \begin{pmatrix}
-                2.3849 & 2.9610 & 1.2232 \\
-                2.4021 & 2.0182 & 1.2924 \\
-                1.7263 & 0.0198 & 2.5621
+                2.0933 & 2.2486 & 1.2232 \\
+                2.3290 & 2.0182 & 1.2924 \\
+                1.2123 & 0.0198 & 2.0603
                 \end{pmatrix}
                 $$
             </p>
