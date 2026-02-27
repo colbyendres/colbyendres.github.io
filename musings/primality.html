@@ -354,7 +354,7 @@
                     bool serial_miller_rabin(const ZZ& n, size_t p) {
                         // Set the modulus for Z/pZ to n
                         ZZ_p::init(n);
-                        ZZ d = (*n) - 1;
+                        ZZ d = n - 1;
                         size_t s = 0;
                         while (d % 2 == 0) {
                             d >>= 1;
