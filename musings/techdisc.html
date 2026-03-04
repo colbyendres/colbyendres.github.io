@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Musings | Frisbee Flight Forecasting </title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body);"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    { left: "$$", right: "$$", display: true },
+                    { left: "$", right: "$", display: false }
+                ]
+            });
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+            hljs.highlightAll();
+        });
+    </script>
+</head>
+
+<body class="bg-indigo-950 text-slate-100 min-h-screen font-serif">
+    <header class="max-w-5xl mx-auto px-6 py-8">
+        <nav class="flex flex-wrap items-center justify-between gap-4">
+            <div class="text-2xl font-semibold text-amber-500">Colby Endres</div>
+            <ul class="flex flex-wrap gap-6 text-emerald-400">
+                <li><a class="hover:text-amber-500 transition" href="../index.html">Home</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../education.html">Education</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../projects.html">Projects</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../musings.html">Musings</a></li>
+                <li><a class="hover:text-amber-500 transition" href="../resume.html">Resumé</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-10">
+        <section class="space-y-4 border-b-2 border-dotted pb-6">
+            <h1 class="text-4xl font-bold text-amber-500">Frisbee Flight Forecasting</h1>
+            <p class="text-lg leading-relaxed">
+                Reverse engineering TechDisc's flight calculator with machine learning
+            </p>
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> The TechDisc Conundrum </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                I've been playing disc golf consistently for around six years. I grew up playing golf, 
+                but eventually gravitated towards disc golf due to my disinterest in the pay-to-play model and general ineptitude 
+                at the sport. Disc golf, I've found, offers a lower barrier to entry and a more relaxed attitude 
+                than its traditional counterpart. More importantly, it's entirely unrelated to my professional interests 
+                in math and computer science. Almost no mathematics is required to play disc golf, aside from the simple 
+                arithmetic needed to tally up score at the end of a round.
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                I was content with this divide between interests. When I grew tired of grappling
+                with a particular taxing math problem or software bug, I could enjoy the fresh air and physical activity
+                by playing a round of disc golf. The activities were complementary and that's how I liked it.
+
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                It wasn't until the release of the <a href="https://shop.techdisc.com" class="text-emerald-400 hover:text-amber-500">TechDisc</a>
+                in early 2024 that these two worlds collided. On the surface, the TechDisc looks like an ordinary disc. Located on the 
+                bottom of the flight plate, however, is an array of telemetry sensors that collects in-flight data. These statistics 
+                are then relayed to the user's phone, which then gives a prediction for how far the disc flew. Paired with a throwing net, 
+                the setup allows players to receive instant feedback for each throw, without the hassle of having to pick up each 
+                disc.
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The sales pitch was convincing, but I balked at the $300 price tag. It appears that the TechDisc is marketed towards 
+                the most dedicated of players, who painstakingly obsess over improving form. I don't fit that description, though I was 
+                still curious about one point: the distance calculation. TechDisc is understandably vague in describing their methodolgy, 
+                only mentioning that the data is passed to the cloud for "flight simulation".
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Admittedly, I don't know much about physics. I took a singular course in mechanics years ago and remember precious little. What I 
+                do have, however, is a massive labeled dataset and a GPU.
+            </p>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                It's practically the same thing.
+            </p>
+
+        </section>
+
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Exploring the Data </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                As part of a marketing campaign, TechDisc had a vendor booth at many of the DGPT events this year. This allowed spectators
+                to try the product out before committing to a purchase. This business decision is a great help to us, since these throws
+                were made <a href="https://techdisc.com/live/CHAMPCUP2025/throws" class="text-emerald-400 hover:text-amber-500">
+                publicly available</a>. After downloading most of the data from the past two years, I had a dataset of just under 
+                20,000 throws.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                TechDisc reports the following metrics:
+            </p>
+
+            <ul class="list-disc leading-relaxed list-inside pl-8 mb-4">
+                <li> speedMph- self explanatory </li>
+                <li> spinRpm- also self explanatory </li>
+                <li> advanceRatio-  metric used in propeller engineering, proportional to linear speed over spin</li>
+                <li> launchAngle- angle of elevation when the disc is released </li>
+                <li> noseAngle- angle of attack </li>
+                <li> hyzerAngle- angle relative to the horizontal viewed behind the thrower </li>
+                <li> wobbleAngle- angle relative to axis of orientation </li>
+                <li> throwType- one of Flat, Hyzer, Anhyzer, Grenade, or Roller </li>
+                <li> primaryThrowType- one of Backhand, Forehand, Tomahawk, Grenade, or Thumber </li>
+            </ul>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                and, of course, the target variable distanceFeet. For those unfamiliar with disc golf terminology, 
+                these metrics are described in greater detail <a href="https://techdisc.freshdesk.com/support/solutions/articles/153000074253-techdisc-metrics"
+                class="text-emerald-400 hover:text-amber-500">here</a>. The first order of business is to look at our 
+                target variable's distribution:
+            </p>
+
+            <img src="techdisc_figures/orig_dist.png" alt="Distribution of throw distances" class="mx-auto pb-4">
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                This looks roughly normal, with most throws in the 250-350 foot range. The concerning part for our analysis is the 
+                left tail. There is a nontrivial amount of throws under 100 feet, significantly under normal distances. I can
+                think of two reasons. The first is that, should a failure occur somewhere in the distance calculation pipeline, 
+                the app automatically returns a distance of zero. 
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The second, and more probable, reason is tomfoolery. When first throwing a TechDisc, most people throw normally
+                for the first dozen or so shots. This inevitably degenerates into trying throws that no reasonable person would 
+                ever attempt, just to see what the app reports. Using the off-hand, throwing the disc upside-down, or shooting the 
+                disc like a basketball are some of the most popular examples. In either case, we ought to eliminate these outliers,
+                as they may confuse our model.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The other prejudice we will exhibit is against overhand throws, grenades, and rollers. These all have fundamentally
+                differently flight paths than an ordinary throw and are seldom used. This leaves only forehands and backhands. With 
+                this, we can eliminate the two categorical variables from our dataset. The first, <code>throwType</code>, is really
+                a proxy for <code>hyzerAngle</code>, as evidenced by the following cluster plot:
+            </p>
+
+            <img src="techdisc_figures/hyzer_angle.png" alt="Classifying shot by hyzer angle" class="mx-auto pb-4">
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Our other categorical variable, <code>primaryThrowType</code> now only contains forehands and backhands. The flight
+                physics for these two throws are identical up to handedness; a lefty backhand flies the same as a righty forehand.
+                This makes the variable redundant, so there's no need to include it in our model.
+            </p>
+
+            <img src="techdisc_figures/forehand_backhand.png" alt="Forehand vs Backhand comparison" class="mx-auto pb-4">
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Indeed, the distributions appear similar, with the height difference due to most players preferring backhand.
+                With these two criteria, we perform the following preprocessing steps:
+            </p>
+
+            <ol class="list-decimal leading-relaxed list-inside pl-8 mb-4">
+                <li> Discard all throws that are neither forehand nor backhand </li>
+                <li> Eliminate both categorical variables </li>
+                <li> Remove all throws containing at least one of the following: </li>
+                <ul class="list-disc leading-relaxed list-inside pl-4">
+                    <li> <code> speedMph < 25</code></li>
+                    <li> <code> launchAngle <= -5 || launchAngle >= 25</code></li>
+                    <li> <code> hyzerAngle <= -45 || hyzerAngle >= 45</code></li>
+                    <li> <code> noseAngle >= 25</code></li>
+                </ul>
+                <li> Filter out any remaining throw under 100 feet, as to avoid equipment failure </li>
+            </ol>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                The thresholds were determined based on histogram plots for each feature variable, as well as 
+                intuition I've gained through years of experience. As a result of preprocessing, 1,077 throws 
+                were discarded (about 5% of the dataset).
+            </p>
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Model Baselines </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Our primary goal is to develop a model that mimics that of the TechDisc as closely as possible. We'll 
+                reserve 10% of our data for testing and use RMSE for our scoring metric. Particularly, we aim 
+                for a RMSE of under 33 feet. This seemingly arbitrary number is the radius of <strong>C1</strong>, an invisible circle
+                centered around the basket analogous to a golf green. Good players make a majority of putts inside 
+                this circle, so if our model predicts that our shot lands here, we'll call it a success.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                As a warmup, let's train a couple of linear regression models with various regularization schemes. We'll 
+                use 5-fold cross-validation for selecting the best regularization coefficients. After normalizing the feature 
+                data, our best linear model has the following performance on the validation set:
+            </p>
+
+            <pre class="rounded-lg bg-slate-900 p-4 overflow-x-auto mb-4 font-mono text-sm"><code class="language-bash"><span class="text-amber-500">cendres@MacBookPro</span> <span class="text-sky-400">tech-disc</span> <span class="text-slate-100">%</span> python train_linear_model.py
+model: LinearRegression()
+reg_type: none
+data_type: data/features.csv
+val_rmse: 58.626450797228756
+            </code></pre>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                which isn't very awe-inspiring. As expected, this suggests that our relationship is nonlinear. The other baseline 
+                I had in mind were gradient-boosted trees, one of the most popular approaches in machine learning. Among other benefits,
+                ensemble methods have been shown to learn interactions, something I expect to be of critical importance. Here's the 
+                training loop, complete with a randomized grid search for tuning hyperparameters: 
+            </p>
+
+            <pre class="rounded-lg bg-slate-800 overflow-x-auto mb-4"><code class="language-python">
+    # Per sklearn's suggestion, use HistGradient over standard GBR
+    # Mainly due to bucketing data, which helps with efficiency on big (>10k) datasets
+    def train_gradient_model(x_train, y_train):
+        # Monotonic constraints to guide model
+        MONO_CTR = {
+            "speedMph": 1,  # higher speed -> more distance
+            "spinRpm": 1,  # higher rpm -> more distance
+            "wobbleAngle": -1  # more wobble -> less distance
+        }
+
+        # Hyperparameter search space
+        param_dist = {
+            "learning_rate": np.logspace(-3, -1, 20),
+            "max_depth": [None, 10, 20],
+            "max_leaf_nodes": [None, 15, 30, 45],
+            "max_features": [0.5, 0.8, 1.0],
+            "min_samples_leaf": [10, 20, 40],
+        }
+
+        gbr = HistGradientBoostingRegressor(
+            monotonic_cst=MONO_CTR,
+            early_stopping=True,
+            loss="squared_error"
+        )
+
+        # Randomized search
+        random_search = RandomizedSearchCV(
+            estimator=gbr,
+            param_distributions=param_dist,
+            n_iter=200,
+            scoring="neg_root_mean_squared_error",
+            cv=5,
+            verbose=1,
+            n_jobs=-1
+        )
+
+        random_search.fit(x_train, y_train)
+        return random_search.best_estimator_, -random_search.best_score_
+                </code></pre>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                which yields much better results:
+            </p>
+
+            <pre class="rounded-lg bg-slate-900 p-4 overflow-x-auto mb-4 font-mono text-sm"><code class="language-bash"><span class="text-amber-500">cendres@MacBookPro</span> <span class="text-sky-400">tech-disc</span> <span class="text-slate-100">%</span> python train_gbr_model.py
+model: HistGradientBoostingRegressor(early_stopping=True,
+                              learning_rate=np.float64(0.06158482110660261),
+                              max_depth=20, max_features=0.5,
+                              max_leaf_nodes=None, min_samples_leaf=10,
+                              monotonic_cst={"speedMph": 1, "spinRpm": 1,
+                                             "wobbleAngle": -1})
+val_rmse: 37.748599895767974
+            </code></pre>
+
+        </section>
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Feature Engineering </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Our ensemble model is getting close to our goal, but we still need to shave off a couple of feet. To do this, we'll explicitly create 
+                interaction terms in our dataset. For parsimony, we only consider interaction terms of the form $x_i \cdot x_j$ (i.e. the product of two features)
+                There are three approaches to this:
+            </p>
+            <ol class="list-decimal leading-relaxed list-inside pl-8 mb-4">
+                <li> Add all $\binom{7}{2}-1 = 20$ interaction terms<sup id="ref-1"> <a href="#fn-1">1</a></sup></li>
+                <li> Add the most relevant interaction terms, as determined by <a href="https://scikit-learn.org/stable/modules/feature_selection.html#l1-based-feature-selection"
+                class="text-emerald-400 hover:text-amber-500">LASSO feature selection</a> </li>
+                <li> Add the most relevant interaction terms, as determined by physical intuition </li>
+            </ol>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+            The first two options are rather straightforward, but the physics-inspired model is more nebulous. Here's the full list of interaction 
+            terms I choose for the physical model, along with brief explanations:
+            </p>
+
+            <ul class="list-disc leading-relaxed list-inside pl-8 mb-4">
+                <li> <code> launch_x_speed = speedMph * cos(launchAngle)</code> (horizontal velocity component) </li>
+                <li> <code> launch_y_speed = speedMph * sin(launchAngle)</code> (vertical velocity component) </li>
+                <li> <code> nose_x_speed = speedMph * cos(noseAngle)</code> (horizontal velocity component) </li>
+                <li> <code> nose_y_speed = speedMph * sin(noseAngle)</code> (vertical velocity component) </li>
+                <li> <code> v0^2 = speedMph * speedMph </code> (proportional to drag) </li>
+                <li> <code> magnus = v0^2 * spinRpm </code> (proportional to Magnus effect) </li>
+            </ul>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                For comparison's sake, here is what LASSO selected:
+            </p>
+
+            <ul class="list-disc leading-relaxed list-inside pl-8 mb-4">
+                <li> <code> speedMph_speedMph = speedMph * speedMph </code>  </li>
+                <li> <code> launchAngle_launchAngle = launchAngle * launchAngle </code>  </li>
+                <li> <code> launchAngle_noseAngle = launchAngle * noseAngle </code>  </li>
+                <li> <code> speedMph_hyzerAngle = speedMph * hyzerAngle </code>  </li>
+                <li> <code> noseAngle_noseAngle = noseAngle * noseAngle </code>  </li>
+                <li> <code> advanceRatio_launchAngle = advanceRatio * launchAngle </code>  </li>
+                <li> <code> spinRpm_launchAngle = spinRpm * launchAngle </code>  </li>
+                <li> <code> spinRpm_spinRpm = spinRpm * spinRpm </code> </li>
+            </ul>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                We can rerun the previous two model selection experiments on our new datasets to see if there's any meaningful improvement.
+                Indeed, we see a marked improvement in our linear model:
+            </p>
+
+            <pre class="rounded-lg bg-slate-900 p-4 overflow-x-auto mb-4 font-mono text-sm"><code class="language-bash"><span class="text-amber-500">cendres@MacBookPro</span> <span class="text-sky-400">tech-disc</span> <span class="text-slate-100">%</span> python train_linear_model.py
+model: LinearRegression()
+reg_type: none
+data_type: data/features_with_all_interactions.csv
+val_rmse: 46.72653112988375
+            </code></pre>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                This should come as no surprise, as, in absence of regularization, RMSE cannot increase when more 
+                features are added<sup id="ref-2"> <a href="#fn-2">2</a></sup>. How did the ensemble model fare?
+            </p>
+
+            <pre class="rounded-lg bg-slate-900 p-4 overflow-x-auto mb-4 font-mono text-sm"><code class="language-bash"><span class="text-amber-500">cendres@MacBookPro</span> <span class="text-sky-400">tech-disc</span> <span class="text-slate-100">%</span> python train_gradient_model.py
+model: HistGradientBoostingRegressor(early_stopping=True,
+                              learning_rate=np.float64(0.06158482110660261),
+                              loss="squared_error", max_features=0.5,
+                              max_leaf_nodes=None, min_samples_leaf=10,
+                              monotonic_cst={"speedMph": 1, "spinRpm": 1,
+                                             "wobbleAngle": -1})
+data_type: data/features_with_all_interactions.csv
+val_rmse: 32.514629879792324
+            </code></pre>
+            
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                We have reached our goal, beating the required 33 ft target for RMSE. This, naturally, assumes that 
+                performance on the test set will be similar. But can we do better?
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                In both cases, the naive approach of using all interaction terms wins out. I still believe there is merit in some 
+                of the physics metrics, so I propose the final set of modifications:
+            </p>
+
+            <ul class="list-disc leading-relaxed list-inside pl-8 mb-4">
+                <li> Replace <code> speedMph_noseAngle </code> with <code> nose_x_speed </code> and <code> nose_y_speed</code>  </li>
+                <li> Replace <code> speedMph_launchAngle </code> with <code> launch_x_speed </code> and <code> launch_y_speed</code>  </li>
+                <li> Add <code> magnus</code>, which is the product of three feature variables </li>
+            </ul>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                With these changes made, we perform one final training session to wring out better performance:
+            </p>
+
+            <pre class="rounded-lg bg-slate-900 p-4 overflow-x-auto mb-4 font-mono text-sm"><code class="language-bash"><span class="text-amber-500">cendres@MacBookPro</span> <span class="text-sky-400">tech-disc</span> <span class="text-slate-100">%</span> python train_gradient_model.py
+model: HistGradientBoostingRegressor(early_stopping=True,
+                              learning_rate=np.float64(0.1), max_features=0.5,
+                              max_leaf_nodes=None, min_samples_leaf=10,
+                              monotonic_cst={"speedMph": 1, "spinRpm": 1,
+                                             "wobbleAngle": -1})
+data_type: data/features_with_new_interactions.csv
+val_rmse: 32.40775557362076
+        </code></pre>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                It looks like our final addition was a wash, with only a negligible improvement. We'll just cross our fingers that this will be enough on 
+                the test set. Without further ado... 
+            </p>
+
+        <pre class="rounded-lg bg-slate-900 p-4 overflow-x-auto mb-4 font-mono text-sm"><code class="language-bash"><span class="text-amber-500">cendres@MacBookPro</span> <span class="text-sky-400">tech-disc</span> <span class="text-slate-100">%</span> python eval_model.py
+=== FINAL MODEL ===
+Dataset: data/features_with_new_interactions.csv
+Validation RMSE: 32.41
+Test RMSE: 29.54
+        </code></pre>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Our model hung on, performing even better on the test set!
+            </p>
+
+
+        </section>
+
+
+        <section class="mt-6">
+            <h3 class="text-xl text-amber-500 font-semibold"> Explanations </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                With our model frozen, our final goal is to provide explanations for our predictions. This can be a nontrivial task for 
+                some architectures, but tree-based models make this simple. We'll rely on SHAP values for generating explanations. 
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                For the uninitiated, SHAP values serve as an approximation of <a href="https://christophm.github.io/interpretable-ml-book/shapley.html"
+                class="text-emerald-400 hover:text-amber-500"> Shapley values</a>, a technique from cooperative game theory. 
+                Given a particular observation, the SHAP value is a signed number representing 
+                the contribution of a particular feature to the final output. An important property to note is that the sum of 
+                SHAP values across all features must be equal to the difference in the final output and baseline 
+                prediction<sup id="ref-3"> <a href="#fn-3">3</a></sup></li>.  
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Take the following forehand from current tour player (and <a href="https://thebatt.com/sports/am-disc-golf-brings-home-third-place-in-the-2021-college-disc-golf-national-championship/"
+                class="text-emerald-400 hover:text-amber-500">TAMU DGC alumn</a>) Chandler Kramer:
+            </p>
+
+            <img src="techdisc_figures/kramer_shap.png" alt="Kramer's SHAP values" class="mx-auto pb-4">
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                Our model's baseline prediction is around 294 feet, which can be seen at the bottom of the picture. 
+                For this particular flight, speed-based features dominate prediction. The top four features are based on velocity 
+                and add nearly 60 feet to the prediction. If we were to add all of the SHAP values together with the baseline, we would 
+                arrive at the predicted distance: 364 feet.
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                To get a better understanding of the entire dataset, we can take a look at a violin plot of SHAP values:
+            </p>
+
+            <img src="techdisc_figures/shap_violin.png" alt="SHAP values for entire dataset" class="mx-auto pb-4">
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                This is consistent with the waterfall plot we saw earlier. A couple of observations:
+            </p>
+
+            <ol class="list-decimal leading-relaxed list-inside pl-8 mb-4">
+                <li> Velocity once again dominates, accounting for four of the top five features. </li>
+                <li> The Magnus effect is an important part of our model. Lift (or glide in disc golf parlance)
+                    is one of the four flight numbers used to describe discs, so this isn't too surprising. </li>
+                <li> High values of <code>launchAngle_noseAngle</code> are detrimental to distance. This would 
+                either involve throwing high and nose up or nose down at the ground, both of which are bad distance lines.</li>
+                <li> <code>wobbleAngle</code> and <code>hyzerAngle</code> are the only two original features not to appear 
+                in the violin plot. The former I suspect is due to the self-stabilization of the disc when thrown at sufficiently 
+                high speeds. The absence of <code>hyzerAngle</code>, outside the two interaction terms, is rather curious.</li>
+            </ol>
+            
+
+        </section>
+
+        <section class="mt-8">
+            <h3 class="text-xl text-amber-500 font-semibold"> Retrospective </h3>
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                In actuality, Kramer's throw went 431 feet, so our model was a rather severe underestimate. This observation led 
+                to one final inquiry: how well does the model perform at different distance bins? After stratifying the test set 
+                by distance, I had the following plots:
+            </p>
+            
+            <img src="techdisc_figures/stratified_rmse.png" alt="Stratified RMSE plots" class="mx-auto pb-4">
+            
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                For average throws (i.e. under 400 ft), the model does similarly across all bins. Performance sharply declines,
+                with an RMSE of 63 feet in the final bin. The likely culprit can be seen in the right plot- lack of training data.
+                500+ feet is elite-level power, possesed by only a small percentage of disc golfers. 
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                This imbalance could be remedied by oversampling, but it's obviously too late now. I am not terribly concerned about this
+                deficiency, as I have no delusions of grandeur about my throwing ability. I seldom crack 400 feet, so breaking the 500 foot 
+                barrier is out of the question. Should I follow the model's guidance on shot selection, I will be rewarded with a putt just 
+                inside circle's edge. 
+            </p>
+
+            <p class="text-md leading-relaxed indent-4 mb-4">
+                It's the perfect distance to hit dead center cage.
+            </p>
+        </section>
+
+        <p class="text-right text-2xl mb-4"> □ </p>
+
+
+    </main>
+
+    <footer class="max-w-5xl mx-auto px-6 py-10 text-sm text-slate-100/70">
+        <ol class="list-decimal list-inside mb-4">
+            <li id="fn-1">
+                The interaction term <code> advanceRatio * speedMph</code> is omitted, since this is just <code> spinRpm</code>.
+            </li>
+            <li id="fn-2">
+                We can match the performance of the old model by zeroing out the elements of the weight vector that correspond to new feature variables. This 
+                motivates metrics like <a href="https://en.wikipedia.org/wiki/Coefficient_of_determination#Adjusted_R2" class="text-emerald-400 hover:text-amber-500">
+               adjusted $R^2$</a>, which penalizes less parsimonious models.
+            </li>
+            <li id="fn-3">
+                In our case, the baseline estimate is the sample mean, though this is dependent on the loss function. If we 
+                used mean absolute error, for instance, the model would have learned the median instead. 
+            </li>
+        </ol>
+        <p>© 2026 Colby Endres. Built for GitHub Pages.</p>
+    </footer>
+</body>
+
+</html>

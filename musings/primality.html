@@ -165,7 +165,7 @@
             <p class="text-md leading-relaxed indent-4 mb-4">
                 With already a relatively short execution time, it appears that we need to up the ante to make
                 performance
-                optimizations worthwile. As such, we turn our attention towards the <a
+                optimizations worthwhile. As such, we turn our attention towards the <a
                     href="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf"
                     class="text-emerald-400 hover:text-amber-500"> NIST standards</a> for digital signatures. Contained
                 within the appendices
@@ -329,7 +329,7 @@
 
             <p class="text-md leading-relaxed indent-4 mb-4">
                 I'll be rewriting the above kernel in C++, since it's a language I'm familiar with.
-                C++, along with its predecessor C, is the de facto choice for performance critical
+                Incidentally, C++, along with its predecessor C, is the de facto choice for performance critical
                 code. All roads lead to Rome, I suppose.
             </p>
 
@@ -354,7 +354,7 @@
                     bool serial_miller_rabin(const ZZ& n, size_t p) {
                         // Set the modulus for Z/pZ to n
                         ZZ_p::init(n);
-                        ZZ d = (*n) - 1;
+                        ZZ d = n - 1;
                         size_t s = 0;
                         while (d % 2 == 0) {
                             d >>= 1;
