@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" role="img" aria-labelledby="title desc">
+  <title id="title">Bipartite Graph Before Ghost Nodes</title>
+  <desc id="desc">Two instructor nodes, Alice and Bob, connected to five course nodes C1 through C5.</desc>
+
+  <defs>
+    <style>
+      .bg { fill: #0f172a; }
+      .edge { stroke: #94a3b8; stroke-width: 2; opacity: 0.55; }
+      .instructor { fill: #f59e0b; stroke: #fbbf24; stroke-width: 2.5; }
+      .course { fill: #0f766e; stroke: #34d399; stroke-width: 2.5; }
+      .label { fill: #e2e8f0; font-family: Georgia, "Times New Roman", serif; font-size: 20px; }
+      .small { fill: #cbd5e1; font-family: Georgia, "Times New Roman", serif; font-size: 16px; }
+      .title { fill: #f59e0b; font-family: Georgia, "Times New Roman", serif; font-weight: 700; font-size: 30px; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="900" height="540" rx="18" />
+
+  <text class="title" x="450" y="42" text-anchor="middle">Before Ghost Nodes</text>
+
+  <!-- Edges: complete bipartite K(2,5) -->
+  <line class="edge" x1="210" y1="180" x2="660" y2="110" />
+  <line class="edge" x1="210" y1="180" x2="660" y2="180" />
+  <line class="edge" x1="210" y1="180" x2="660" y2="250" />
+  <line class="edge" x1="210" y1="180" x2="660" y2="320" />
+  <line class="edge" x1="210" y1="180" x2="660" y2="390" />
+
+  <line class="edge" x1="210" y1="330" x2="660" y2="110" />
+  <line class="edge" x1="210" y1="330" x2="660" y2="180" />
+  <line class="edge" x1="210" y1="330" x2="660" y2="250" />
+  <line class="edge" x1="210" y1="330" x2="660" y2="320" />
+  <line class="edge" x1="210" y1="330" x2="660" y2="390" />
+
+  <!-- Left partition -->
+  <circle class="instructor" cx="170" cy="180" r="40" />
+  <circle class="instructor" cx="170" cy="330" r="40" />
+
+  <text class="label" x="170" y="186" text-anchor="middle">Alice</text>
+  <text class="label" x="170" y="336" text-anchor="middle">Bob</text>
+
+  <text class="small" x="170" y="235" text-anchor="middle">capacity = 2</text>
+  <text class="small" x="170" y="385" text-anchor="middle">capacity = 3</text>
+
+  <!-- Right partition -->
+  <circle class="course" cx="700" cy="110" r="32" />
+  <circle class="course" cx="700" cy="180" r="32" />
+  <circle class="course" cx="700" cy="250" r="32" />
+  <circle class="course" cx="700" cy="320" r="32" />
+  <circle class="course" cx="700" cy="390" r="32" />
+
+  <text class="label" x="700" y="116" text-anchor="middle">C1</text>
+  <text class="label" x="700" y="186" text-anchor="middle">C2</text>
+  <text class="label" x="700" y="256" text-anchor="middle">C3</text>
+  <text class="label" x="700" y="326" text-anchor="middle">C4</text>
+  <text class="label" x="700" y="396" text-anchor="middle">C5</text>
+
+  <text class="small" x="450" y="500" text-anchor="middle">
+    Each edge indicates a feasible instructor-course pairing.
+  </text>
+</svg>

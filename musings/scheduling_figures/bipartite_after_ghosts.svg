@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" role="img" aria-labelledby="title desc">
+  <title id="title">Bipartite Graph After Ghost Nodes</title>
+  <desc id="desc">Five instructor copies Alice1, Alice2, Bob1, Bob2, Bob3 connected to five courses C1 through C5.</desc>
+
+  <defs>
+    <style>
+      .bg { fill: #0f172a; }
+      .edge { stroke: #94a3b8; stroke-width: 1.7; opacity: 0.42; }
+      .instructor { fill: #f59e0b; stroke: #fbbf24; stroke-width: 2.2; }
+      .ghost { fill: none; stroke: #fbbf24; stroke-width: 2.2; stroke-dasharray: 8 6; }
+      .course { fill: #0f766e; stroke: #34d399; stroke-width: 2.5; }
+      .label { fill: #e2e8f0; font-family: Georgia, "Times New Roman", serif; font-size: 18px; }
+      .small { fill: #cbd5e1; font-family: Georgia, "Times New Roman", serif; font-size: 15px; }
+      .title { fill: #f59e0b; font-family: Georgia, "Times New Roman", serif; font-weight: 700; font-size: 30px; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="900" height="540" rx="18" />
+
+  <text class="title" x="450" y="42" text-anchor="middle">After Ghost Nodes</text>
+
+  <!-- Edges: complete bipartite K(5,5) -->
+  <!-- A1 -->
+  <line class="edge" x1="208" y1="110" x2="660" y2="110" />
+  <line class="edge" x1="208" y1="110" x2="660" y2="180" />
+  <line class="edge" x1="208" y1="110" x2="660" y2="250" />
+  <line class="edge" x1="208" y1="110" x2="660" y2="320" />
+  <line class="edge" x1="208" y1="110" x2="660" y2="390" />
+
+  <!-- A2 -->
+  <line class="edge" x1="208" y1="180" x2="660" y2="110" />
+  <line class="edge" x1="208" y1="180" x2="660" y2="180" />
+  <line class="edge" x1="208" y1="180" x2="660" y2="250" />
+  <line class="edge" x1="208" y1="180" x2="660" y2="320" />
+  <line class="edge" x1="208" y1="180" x2="660" y2="390" />
+
+  <!-- B1 -->
+  <line class="edge" x1="208" y1="250" x2="660" y2="110" />
+  <line class="edge" x1="208" y1="250" x2="660" y2="180" />
+  <line class="edge" x1="208" y1="250" x2="660" y2="250" />
+  <line class="edge" x1="208" y1="250" x2="660" y2="320" />
+  <line class="edge" x1="208" y1="250" x2="660" y2="390" />
+
+  <!-- B2 -->
+  <line class="edge" x1="208" y1="320" x2="660" y2="110" />
+  <line class="edge" x1="208" y1="320" x2="660" y2="180" />
+  <line class="edge" x1="208" y1="320" x2="660" y2="250" />
+  <line class="edge" x1="208" y1="320" x2="660" y2="320" />
+  <line class="edge" x1="208" y1="320" x2="660" y2="390" />
+
+  <!-- B3 -->
+  <line class="edge" x1="208" y1="390" x2="660" y2="110" />
+  <line class="edge" x1="208" y1="390" x2="660" y2="180" />
+  <line class="edge" x1="208" y1="390" x2="660" y2="250" />
+  <line class="edge" x1="208" y1="390" x2="660" y2="320" />
+  <line class="edge" x1="208" y1="390" x2="660" y2="390" />
+
+  <!-- Left partition -->
+  <circle class="instructor" cx="170" cy="110" r="36" />
+  <circle class="instructor ghost" cx="170" cy="180" r="36" />
+  <circle class="instructor" cx="170" cy="250" r="36" />
+  <circle class="instructor ghost" cx="170" cy="320" r="36" />
+  <circle class="instructor ghost" cx="170" cy="390" r="36" />
+
+  <text class="label" x="170" y="116" text-anchor="middle">A1</text>
+  <text class="label" x="170" y="186" text-anchor="middle">A2</text>
+  <text class="label" x="170" y="256" text-anchor="middle">B1</text>
+  <text class="label" x="170" y="326" text-anchor="middle">B2</text>
+  <text class="label" x="170" y="396" text-anchor="middle">B3</text>
+
+  <text class="small" x="108" y="110" text-anchor="end">Alice</text>
+  <text class="small" x="108" y="180" text-anchor="end">Alice</text>
+  <text class="small" x="108" y="250" text-anchor="end">Bob</text>
+  <text class="small" x="108" y="320" text-anchor="end">Bob</text>
+  <text class="small" x="108" y="390" text-anchor="end">Bob</text>
+
+  <!-- Right partition -->
+  <circle class="course" cx="700" cy="110" r="32" />
+  <circle class="course" cx="700" cy="180" r="32" />
+  <circle class="course" cx="700" cy="250" r="32" />
+  <circle class="course" cx="700" cy="320" r="32" />
+  <circle class="course" cx="700" cy="390" r="32" />
+
+  <text class="label" x="700" y="116" text-anchor="middle">C1</text>
+  <text class="label" x="700" y="186" text-anchor="middle">C2</text>
+  <text class="label" x="700" y="256" text-anchor="middle">C3</text>
+  <text class="label" x="700" y="326" text-anchor="middle">C4</text>
+  <text class="label" x="700" y="396" text-anchor="middle">C5</text>
+
+  <text class="small" x="450" y="500" text-anchor="middle">
+    Expanding by contract load gives equal partition sizes (5 instructor copies, 5 courses).
+  </text>
+</svg>
