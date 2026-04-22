@@ -109,13 +109,10 @@
         <section class="mt-6">
             <h3 class="text-xl text-amber-500 font-semibold"> The Naive Approach </h3>
             <p class="text-md leading-relaxed indent-4 mb-4">
-                Programming for mathematics courses tends to follow the path of least resistance. Performance
-                optimizations
-                and good software engineering practices tend to take a backseat to ease of development. This naturally
-                leads
-                to students to gravitate towards Python, so that's where I will begin. Below is a naive Python
-                implementation
-                of the Miller-Rabin primality test:
+                Like current through a wire, mathematics students tend to follow the path of least resistance when it comes to programming. Performance
+                optimizations and good software engineering practices take a backseat to ease of development. This naturally
+                leads to students to gravitate towards Python, so that's where I will begin. Below is a naive Python
+                implementation of the Miller-Rabin primality test:
             </p>
 
             <pre class="rounded-lg bg-slate-800 overflow-x-auto mb-4"><code class="language-python">
@@ -221,10 +218,10 @@
                 cheaper
                 alternatives<sup id="ref-1"> <a href="#fn-1">1</a></sup>. Lucky for us, we can make the following substitutions:
             <ul class="list-disc leading-relaxed list-inside pl-8 mb-4">
-                <li> <code class="language-python"> while(n % 2 == 0): </code> $\implies$ <code
-                        class="language-python"> while(~n & 1): </code> </li>
-                <li> <code class="language-python"> n /= 2 </code> $\implies$ <code
-                        class="language-python"> n >>= 1</code> </li>
+                <li> <code class="language-python"> while(d % 2 == 0): </code> $\implies$ <code
+                        class="language-python"> while(~d & 1): </code> </li>
+                <li> <code class="language-python"> d //= 2 </code> $\implies$ <code
+                        class="language-python"> d >>= 1</code> </li>
             </ul>
             to rely on bitwise operations. These instructions take only a single clock cycle to execute on most modern
             processors.
@@ -261,7 +258,7 @@
                 def fast_power_of_two_and_odd(n):
                     """ Factor n = 2^s * d, where d is odd """
                     s, d = 0, n
-                    while d % 2 == 0:
+                    while ~d & 1:
                         d >>= 1
                         s += 1
                     return s, d
@@ -294,9 +291,8 @@
             </pre>
 
             <p class="text-md leading-relaxed indent-4 mb-4">
-                Running this on the same prime as before, I get a time of 182 ms, which is over a 2x speedup over the
-                naive
-                approach. This is a great improvement for such low-hanging fruit, but we can do much better.
+                Running this on the same prime as before, I get an answer in 182 ms,less than half the time of the original approach. 
+                This is a great improvement for such low-hanging fruit, but we can do much better.
             </p>
         </section>
 
@@ -466,7 +462,7 @@ wall time: 15.87ms
                 threads
                 and have each thread modify a global variable indicating if a witness has been found. Even better,
                 this partitioning is automatically handled by the <code> NTL_EXEC_RANGE </code> macro, which acts
-                similar to OpenMP's <code> #pragma omp parallel for</code>. All we have to do is move the initialization
+                similar to OpenMP's <code> #pragma omp parallel for</code> directive. All we have to do is move the initialization
                 of our integers inside the critical section to make them thread local. Here's our fully parallelized
                 code:
             </p>
@@ -807,7 +803,7 @@ wall time: 15.87ms
                 just </span> our function. However, I'm more interested in the perceived runtime by the user, which naturally must account for interference by the operating system.
             </li>
             <li id="fn-3">
-                It is well-known that, for composite $n$, at most $\frac{1}{4}$ the elements of
+                It is well-known that for composite $n$ at most $\frac{1}{4}$ the elements of
                 $(\mathbb{Z}/n\mathbb{Z})^*$ are Miller-Rabin liars.
                 Thus, the probability that a composite survives $k$ rounds of Miller-Rabin is no more than $4^{-k}$,
                 from
